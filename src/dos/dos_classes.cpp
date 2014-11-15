@@ -407,10 +407,16 @@ void DOS_FCB::SetName(Bit8u _drive,char * _fname,char * _ext) {
 	MEM_BlockWrite(pt+offsetof(sFCB,ext),_ext,3);
 }
 
-void DOS_FCB::SetSizeDateTime(Bit32u _size,Bit16u _date,Bit16u _time) {
+void DOS_FCB::SetSizeDateTime(Bit32u _size,Bit16u _date,Bit16u _time,bool byFindFCB) {
 	sSave(sFCB,filesize,_size);
 	sSave(sFCB,date,_date);
 	sSave(sFCB,time,_time);
+	if (byFindFCB) {
+		/* DOS directory entry (see table 01352 on Interrupt List) */
+		SaveIt(2,offsetof(sFCB,filename)+0x16,_time);
+		SaveIt(2,offsetof(sFCB,filename)+0x18,_date);
+		SaveIt(4,offsetof(sFCB,filename)+0x1c,_size);
+	}
 }
 
 void DOS_FCB::GetSizeDateTime(Bit32u & _size,Bit16u & _date,Bit16u & _time) {
@@ -490,8 +496,10 @@ void DOS_FCB::GetAttr(Bit8u& attr) {
 	if(extended) attr=mem_readb(pt - 1);
 }
 
-void DOS_FCB::SetAttr(Bit8u attr) {
+void DOS_FCB::SetAttr(Bit8u attr,bool byFindFCB) {
 	if(extended) mem_writeb(pt - 1,attr);
+	/* DOS directory entry (see table 01352 on Interrupt List) */
+	if (byFindFCB) SaveIt(1,offsetof(sFCB,filename)+0x0b,attr);
 }
 
 void DOS_FCB::SetResultAttr(Bit8u attr) {

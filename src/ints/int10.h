@@ -168,6 +168,13 @@ void INT10_ReadCharAttr(Bit16u * result,Bit8u page);
 void INT10_WriteChar(Bit8u chr,Bit8u attr,Bit8u page,Bit16u count,bool showattr);
 void INT10_WriteString(Bit8u row,Bit8u col,Bit8u flag,Bit8u attr,PhysPt string,Bit16u count,Bit8u page);
 
+void INT10_SetCursorShape_viaRealInt(Bit8u first,Bit8u last);
+void INT10_SetCursorPos_viaRealInt(Bit8u row,Bit8u col,Bit8u page);
+void INT10_ScrollWindow_viaRealInt(Bit8u rul,Bit8u cul,Bit8u rlr,Bit8u clr,Bit8s nlines,Bit8u attr,Bit8u page);
+void INT10_TeletypeOutput_viaRealInt(Bit8u chr,Bit8u attr);
+void INT10_TeletypeOutputAttr_viaRealInt(Bit8u chr,Bit8u attr,bool useattr);
+void INT10_WriteChar_viaRealInt(Bit8u chr,Bit8u attr,Bit8u page,Bit16u count,bool showattr);
+
 /* Graphics Stuff */
 void INT10_PutPixel(Bit16u x,Bit16u y,Bit8u page,Bit8u color);
 void INT10_GetPixel(Bit16u x,Bit16u y,Bit8u page,Bit8u * color);

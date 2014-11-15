@@ -109,7 +109,7 @@
 #define BIOS_DEFAULT_RESET_LOCATION		(RealMake(0xf000,0xe05b))
 
 /* maximum of scancodes handled by keyboard bios routines */
-#define MAX_SCAN_CODE 0x58
+#define MAX_SCAN_CODE 0x7f
 
 /* The Section handling Bios Disk Access */
 //#define BIOS_MAX_DISK 10

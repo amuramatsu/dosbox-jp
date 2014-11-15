@@ -24,6 +24,8 @@
 #include "mem.h"
 #include "inout.h"
 #include "int10.h"
+#include "regs.h"
+#include "callback.h"
 
 static void CGA2_CopyRow(Bit8u cleft,Bit8u cright,Bit8u rold,Bit8u rnew,PhysPt base) {
 	Bit8u cheight = real_readb(BIOSMEM_SEG,BIOSMEM_CHAR_HEIGHT);
@@ -655,4 +657,142 @@ void INT10_WriteString(Bit8u row,Bit8u col,Bit8u flag,Bit8u attr,PhysPt string,B
 	if (!(flag&1)) {
 		INT10_SetCursorPos(cur_row,cur_col,page);
 	}
+}
+
+
+#define _pushregs \
+    Bit16u tmp_ax = reg_ax, tmp_bx = reg_bx, tmp_cx = reg_cx, tmp_dx = reg_dx;
+#define _popregs \
+    reg_ax = tmp_ax, reg_bx = tmp_bx, reg_cx = tmp_cx, reg_dx = tmp_dx;
+
+bool INT10_isTextMode() {
+	bool result;
+	if (CurMode->type == M_TEXT)
+		return true;
+	
+	_pushregs;
+	Bit16u tmp_di = reg_di, tmp_es = SegValue(es);
+	SegSet16(es, 0); reg_di = 0;
+	reg_ah = 0xfe;
+	CALLBACK_RunRealInt(0x10);
+	result = !(SegValue(es) && reg_di);
+	SegSet16(es, tmp_es); reg_di = tmp_di;
+	_popregs;
+	return result;
+}
+
+void INT10_SetCursorShape_viaRealInt(Bit8u first,Bit8u last) {
+	_pushregs;
+	reg_ah = 0x01;
+	reg_ch = first;
+	reg_cl = last;
+	CALLBACK_RunRealInt(0x10);
+	_popregs;
+}
+
+void INT10_SetCursorPos_viaRealInt(Bit8u row,Bit8u col,Bit8u page) {
+	_pushregs;
+	reg_ah = 0x02;
+	if(page==0xFF) page=real_readb(BIOSMEM_SEG,BIOSMEM_CURRENT_PAGE);
+	reg_bh = page;
+	reg_dl = col;
+	reg_dh = row;
+	CALLBACK_RunRealInt(0x10);
+	_popregs;
+}
+
+void INT10_ScrollWindow_viaRealInt(Bit8u rul,Bit8u cul,Bit8u rlr,Bit8u clr,Bit8s nlines,Bit8u attr,Bit8u page) {
+	BIOS_NCOLS;
+	BIOS_NROWS;
+	
+	_pushregs;
+	
+	if (nrows == 256 || nrows == 1) nrows = 25;
+	if (nlines > 0) {
+		reg_ah = 0x07;
+		reg_al = (Bit8u)nlines;
+	}
+	else {
+		reg_ah = 0x06;
+		reg_al = (Bit8u)(-nlines);
+	}
+	/* only works with active page */
+	/* if(page==0xFF) page=real_readb(BIOSMEM_SEG,BIOSMEM_CURRENT_PAGE); */
+
+	if (clr >= ncols) clr = (Bit8u)(ncols - 1);
+	if (rlr >= nrows) rlr = nrows - 1;
+	
+	reg_bh = attr;
+	reg_cl = cul;
+	reg_ch = rul;
+	reg_dl = clr;
+	reg_dh = rlr;
+	CALLBACK_RunRealInt(0x10);
+	
+	_popregs;
+}
+
+
+void INT10_TeletypeOutputAttr_viaRealInt(Bit8u chr,Bit8u attr,bool useattr) {
+	BIOS_NCOLS;BIOS_NROWS;
+	Bit8u page=real_readb(BIOSMEM_SEG,BIOSMEM_CURRENT_PAGE);
+	Bit8u cur_row=CURSOR_POS_ROW(page);
+	Bit8u cur_col=CURSOR_POS_COL(page);
+	switch (chr) {
+	case 7:
+	//TODO BEEP
+	break;
+	case 8:
+		if(cur_col>0) cur_col--;
+		break;
+	case '\r':
+		cur_col=0;
+		break;
+	case '\n':
+//		cur_col=0; //Seems to break an old chess game
+		cur_row++;
+		break;
+	case '\t':
+		do {
+			INT10_TeletypeOutputAttr_viaRealInt(' ',attr,useattr);
+			cur_row=CURSOR_POS_ROW(page);
+			cur_col=CURSOR_POS_COL(page);
+		} while(cur_col%8);
+		break;
+	default:
+		/* Draw the actual Character */
+		INT10_WriteChar_viaRealInt(chr,attr,page,1,useattr);
+		cur_col++;
+	}
+	if(cur_col>=ncols) {
+		cur_col=0;
+		cur_row++;
+	}
+	// Do we need to scroll ?
+	if(cur_row>=nrows) {
+		//Fill with black on non-text modes and with 0x7 on textmode
+		Bit8u fill = INT10_isTextMode() ? 0x7:0;
+		INT10_ScrollWindow_viaRealInt(0,0,nrows-1,ncols-1,-1,fill,page);
+		cur_row--;
+	}
+	// Set the cursor for the page
+	INT10_SetCursorPos_viaRealInt(cur_row,cur_col,page);
+}
+
+
+void INT10_TeletypeOutput_viaRealInt(Bit8u chr,Bit8u attr) {
+	INT10_TeletypeOutputAttr_viaRealInt(chr,attr,!INT10_isTextMode());
+}
+
+
+void INT10_WriteChar_viaRealInt(Bit8u chr,Bit8u attr,Bit8u page,Bit16u count,bool showattr){
+	_pushregs;
+	if(page==0xFF) page=real_readb(BIOSMEM_SEG,BIOSMEM_CURRENT_PAGE);
+	reg_ah = showattr ? 0x09 : 0x0a;
+	reg_al = chr;
+	reg_bh = page;
+	reg_bl = attr;
+	reg_cx = count;
+	CALLBACK_RunRealInt(0x10);
+	_popregs;
 }

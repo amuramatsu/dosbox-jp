@@ -493,7 +493,7 @@ public:
 	DOS_FCB(Bit16u seg,Bit16u off,bool allow_extended=true);
 	void Create(bool _extended);
 	void SetName(Bit8u _drive,char * _fname,char * _ext);
-	void SetSizeDateTime(Bit32u _size,Bit16u _date,Bit16u _time);
+	void SetSizeDateTime(Bit32u _size,Bit16u _date,Bit16u _time,bool byFindFCB=false);
 	void GetSizeDateTime(Bit32u & _size,Bit16u & _date,Bit16u & _time);
 	void GetName(char * fillname);
 	void FileOpen(Bit8u _fhandle);
@@ -506,7 +506,7 @@ public:
 	Bit8u GetDrive(void);
 	bool Extended(void);
 	void GetAttr(Bit8u & attr);
-	void SetAttr(Bit8u attr);
+	void SetAttr(Bit8u attr,bool byFindFCB=false);
 	void SetResultAttr(Bit8u attr);
 	bool Valid(void);
 private:

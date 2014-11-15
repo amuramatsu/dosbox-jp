@@ -902,7 +902,7 @@ static void DTAExtendName(char * const name,char * const filename,char * const e
 	ext[3]=0;
 }
 
-static void SaveFindResult(DOS_FCB & find_fcb) {
+static void SaveFindResult(DOS_FCB & find_fcb,bool byFindFCB=false) {
 	DOS_DTA find_dta(dos.tables.tempdta);
 	char name[DOS_NAMELENGTH_ASCII];Bit32u size;Bit16u date;Bit16u time;Bit8u attr;Bit8u drive;
 	char file_name[9];char ext[4];
@@ -915,9 +915,9 @@ static void SaveFindResult(DOS_FCB & find_fcb) {
 	DOS_FCB fcb(RealSeg(dos.dta()),RealOff(dos.dta()));//TODO
 	fcb.Create(find_fcb.Extended());
 	fcb.SetName(drive,file_name,ext);
-	fcb.SetAttr(find_attr);      /* Only adds attribute if fcb is extended */
+	fcb.SetAttr(attr,byFindFCB);  /* Only adds attribute if fcb is extended */
 	fcb.SetResultAttr(attr);
-	fcb.SetSizeDateTime(size,date,time);
+	fcb.SetSizeDateTime(size,date,time,byFindFCB);
 }
 
 bool DOS_FCBCreate(Bit16u seg,Bit16u offset) { 
@@ -979,7 +979,7 @@ bool DOS_FCBFindFirst(Bit16u seg,Bit16u offset) {
 	fcb.GetAttr(attr); /* Gets search attributes if extended */
 	bool ret=DOS_FindFirst(name,attr,true);
 	dos.dta(old_dta);
-	if (ret) SaveFindResult(fcb);
+	if (ret) SaveFindResult(fcb,true);
 	return ret;
 }
 
@@ -988,7 +988,7 @@ bool DOS_FCBFindNext(Bit16u seg,Bit16u offset) {
 	RealPt old_dta=dos.dta();dos.dta(dos.tables.tempdta);
 	bool ret=DOS_FindNext();
 	dos.dta(old_dta);
-	if (ret) SaveFindResult(fcb);
+	if (ret) SaveFindResult(fcb,true);
 	return ret;
 }
 

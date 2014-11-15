@@ -446,6 +446,19 @@ Bitu GetKeyCode(SDL_keysym keysym) {
 		/* special handling of 102-key under windows */
 		if ((keysym.sym==SDLK_BACKSLASH) && (keysym.scancode==0x56)) return (Bitu)SDLK_LESS;
 #endif
+		/* special handling of Japanese 106-key */
+#if !defined (WIN32) && !defined (MACOSX) && !defined(OS2)
+			/* Linux */
+		if ((keysym.sym==SDLK_BACKSLASH) && (keysym.scancode==(0x7d + 8)))
+#elif defined (WIN32)
+			/* Win32 */
+		if (keysym.scancode==0x7d)
+#else
+			/* others (not tested) */
+		if ((keysym.sym==SDLK_BACKSLASH) && (keysym.scancode==0x7d))
+#endif
+			return (Bitu)SDLK_WORLD_5; /* 0xa5 ... Yen in Latin-1 */
+
 		return (Bitu)keysym.sym;
 	}
 }
@@ -1736,12 +1749,12 @@ static KeyBlock combo_f[12]={
 	{"F10","f10",KBD_f10},	{"F11","f11",KBD_f11},	{"F12","f12",KBD_f12},
 };
 
-static KeyBlock combo_1[14]={
+static KeyBlock combo_1[15]={
 	{"`~","grave",KBD_grave},	{"1!","1",KBD_1},	{"2@","2",KBD_2},
 	{"3#","3",KBD_3},			{"4$","4",KBD_4},	{"5%","5",KBD_5},
 	{"6^","6",KBD_6},			{"7&","7",KBD_7},	{"8*","8",KBD_8},
 	{"9(","9",KBD_9},			{"0)","0",KBD_0},	{"-_","minus",KBD_minus},	
-	{"=+","equals",KBD_equals},	{"\x1B","bspace",KBD_backspace},
+	{"=+","equals",KBD_equals},	{"\\","yen",KBD_yen},{"\x1B","bspace",KBD_backspace},
 };
 
 static KeyBlock combo_2[12]={
@@ -1760,12 +1773,13 @@ static KeyBlock combo_3[12]={
 	{"\\","backslash",KBD_backslash},	
 };
 
-static KeyBlock combo_4[11]={
+static KeyBlock combo_4[12]={
 	{"<","lessthan",KBD_extra_lt_gt},
 	{"z","z",KBD_z},			{"x","x",KBD_x},	{"c","c",KBD_c},
 	{"v","v",KBD_v},			{"b","b",KBD_b},	{"n","n",KBD_n},
 	{"m","m",KBD_m},			{",","comma",KBD_comma},
-	{".","period",KBD_period},						{"/","slash",KBD_slash},		
+	{".","period",KBD_period},	{"/","slash",KBD_slash},	{"\\","underscore",KBD_underscore},
+	
 };
 
 static CKeyEvent * caps_lock_event=NULL;
@@ -1781,7 +1795,7 @@ static void CreateLayout(void) {
 #define PY(_Y_) (10+(_Y_)*BH)
 	AddKeyButtonEvent(PX(0),PY(0),BW,BH,"ESC","esc",KBD_esc);
 	for (i=0;i<12;i++) AddKeyButtonEvent(PX(2+i),PY(0),BW,BH,combo_f[i].title,combo_f[i].entry,combo_f[i].key);
-	for (i=0;i<14;i++) AddKeyButtonEvent(PX(  i),PY(1),BW,BH,combo_1[i].title,combo_1[i].entry,combo_1[i].key);
+	for (i=0;i<sizeof(combo_1)/sizeof(combo_1[0]);i++) AddKeyButtonEvent(PX(  i),PY(1),BW,BH,combo_1[i].title,combo_1[i].entry,combo_1[i].key);
 
 	AddKeyButtonEvent(PX(0),PY(2),BW*2,BH,"TAB","tab",KBD_tab);
 	for (i=0;i<12;i++) AddKeyButtonEvent(PX(2+i),PY(2),BW,BH,combo_2[i].title,combo_2[i].entry,combo_2[i].key);
@@ -1792,7 +1806,7 @@ static void CreateLayout(void) {
 	for (i=0;i<12;i++) AddKeyButtonEvent(PX(2+i),PY(3),BW,BH,combo_3[i].title,combo_3[i].entry,combo_3[i].key);
 
 	AddKeyButtonEvent(PX(0),PY(4),BW*2,BH,"SHIFT","lshift",KBD_leftshift);
-	for (i=0;i<11;i++) AddKeyButtonEvent(PX(2+i),PY(4),BW,BH,combo_4[i].title,combo_4[i].entry,combo_4[i].key);
+	for (i=0;i<sizeof(combo_4)/sizeof(combo_4[0]);i++) AddKeyButtonEvent(PX(2+i),PY(4),BW,BH,combo_4[i].title,combo_4[i].entry,combo_4[i].key);
 	AddKeyButtonEvent(PX(13),PY(4),BW*3,BH,"SHIFT","rshift",KBD_rightshift);
 
 	/* Last Row */
@@ -2052,6 +2066,7 @@ static struct {
 #else
 	{"lessthan",SDLK_LESS},
 #endif
+	{"yen",SDLK_WORLD_5}, {"underscore",SDLK_UNDERSCORE},
 
 	{0,0}
 };
@@ -2501,6 +2516,8 @@ void MAPPER_StartUp(Section * sec) {
 		sdlkey_map[0xc5]=SDLK_PAUSE;
 		sdlkey_map[0xb7]=SDLK_PRINT;
 		sdlkey_map[0xb8]=SDLK_RALT;
+		sdlkey_map[0x7d]=SDLK_WORLD_5;		/* jp106:IBM-14 7D/FD */
+		sdlkey_map[0x73]=SDLK_UNDERSCORE;	/* jp106:IBM-56 73/F3 */
 #endif
 
 		Bitu i;

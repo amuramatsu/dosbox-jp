@@ -341,6 +341,9 @@ void KEYBOARD_AddKey(KBD_KEYS keytype,bool pressed) {
 	case KBD_printscreen:
 		/* Not handled yet. But usuable in mapper for special events */
 		return;
+	case KBD_underscore:ret=0x73;break;
+	case KBD_yen:ret=0x7d;break;
+
 	default:
 		E_Exit("Unsupported key press");
 		break;

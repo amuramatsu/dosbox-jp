@@ -57,7 +57,7 @@ bool device_CON::Read(Bit8u * data,Bit16u * size) {
 	Bit16u count=0;
 	if ((readcache) && (*size)) {
 		data[count++]=readcache;
-		if(dos.echo) INT10_TeletypeOutput(readcache,7);
+		if(dos.echo) INT10_TeletypeOutput_viaRealInt(readcache,7);
 		readcache=0;
 	}
 	while (*size>count) {
@@ -70,8 +70,8 @@ bool device_CON::Read(Bit8u * data,Bit16u * size) {
 			*size=count;
 			reg_ax=oldax;
 			if(dos.echo) { 
-				INT10_TeletypeOutput(13,7); //maybe don't do this ( no need for it actually ) (but it's compatible)
-				INT10_TeletypeOutput(10,7);
+				INT10_TeletypeOutput_viaRealInt(13,7); //maybe don't do this ( no need for it actually ) (but it's compatible)
+				INT10_TeletypeOutput_viaRealInt(10,7);
 			}
 			return true;
 			break;
@@ -79,8 +79,8 @@ bool device_CON::Read(Bit8u * data,Bit16u * size) {
 			if(*size==1) data[count++]=reg_al;  //one char at the time so give back that BS
 			else if(count) {                    //Remove data if it exists (extended keys don't go right)
 				data[count--]=0;
-				INT10_TeletypeOutput(8,7);
-				INT10_TeletypeOutput(' ',7);
+				INT10_TeletypeOutput_viaRealInt(8,7);
+				INT10_TeletypeOutput_viaRealInt(' ',7);
 			} else {
 				continue;                       //no data read yet so restart whileloop.
 			}
@@ -104,7 +104,7 @@ bool device_CON::Read(Bit8u * data,Bit16u * size) {
 			break;
 		}
 		if(dos.echo) { //what to do if *size==1 and character is BS ?????
-			INT10_TeletypeOutput(reg_al,7);
+			INT10_TeletypeOutput_viaRealInt(reg_al,7);
 		}
 	}
 	*size=count;
@@ -129,9 +129,9 @@ bool device_CON::Write(Bit8u * data,Bit16u * size) {
 				continue;
 			} else { 
 				/* Some sort of "hack" now that '\n' doesn't set col to 0 (int10_char.cpp old chessgame) */
-				if((data[count] == '\n') && (lastwrite != '\r')) INT10_TeletypeOutputAttr('\r',ansi.attr,ansi.enabled);
+				if((data[count] == '\n') && (lastwrite != '\r')) INT10_TeletypeOutputAttr_viaRealInt('\r',ansi.attr,ansi.enabled);
 				/* pass attribute only if ansi is enabled */
-				INT10_TeletypeOutputAttr(data[count],ansi.attr,ansi.enabled);
+				INT10_TeletypeOutputAttr_viaRealInt(data[count],ansi.attr,ansi.enabled);
 				lastwrite = data[count++];
 				continue;
 		}
@@ -274,7 +274,7 @@ bool device_CON::Write(Bit8u * data,Bit16u * size) {
 			if(ansi.data[1] == 0) ansi.data[1] = 1;
 			if(ansi.data[0] > ansi.nrows) ansi.data[0] = (Bit8u)ansi.nrows;
 			if(ansi.data[1] > ansi.ncols) ansi.data[1] = (Bit8u)ansi.ncols;
-			INT10_SetCursorPos(--(ansi.data[0]),--(ansi.data[1]),page); /*ansi=1 based, int10 is 0 based */
+			INT10_SetCursorPos_viaRealInt(--(ansi.data[0]),--(ansi.data[1]),page); /*ansi=1 based, int10 is 0 based */
 			ClearAnsi();
 			break;
 			/* cursor up down and forward and backward only change the row or the col not both */
@@ -284,7 +284,7 @@ bool device_CON::Write(Bit8u * data,Bit16u * size) {
 			tempdata = (ansi.data[0]? ansi.data[0] : 1);
 			if(tempdata > row) { row=0; } 
 			else { row-=tempdata;}
-			INT10_SetCursorPos(row,col,page);
+			INT10_SetCursorPos_viaRealInt(row,col,page);
 			ClearAnsi();
 			break;
 		case 'B': /*cursor Down */
@@ -294,7 +294,7 @@ bool device_CON::Write(Bit8u * data,Bit16u * size) {
 			if(tempdata + static_cast<Bitu>(row) >= ansi.nrows)
 				{ row = ansi.nrows - 1;}
 			else	{ row += tempdata; }
-			INT10_SetCursorPos(row,col,page);
+			INT10_SetCursorPos_viaRealInt(row,col,page);
 			ClearAnsi();
 			break;
 		case 'C': /*cursor forward */
@@ -304,7 +304,7 @@ bool device_CON::Write(Bit8u * data,Bit16u * size) {
 			if(tempdata + static_cast<Bitu>(col) >= ansi.ncols) 
 				{ col = ansi.ncols - 1;} 
 			else	{ col += tempdata;}
-			INT10_SetCursorPos(row,col,page);
+			INT10_SetCursorPos_viaRealInt(row,col,page);
 			ClearAnsi();
 			break;
 		case 'D': /*Cursor Backward  */
@@ -313,7 +313,7 @@ bool device_CON::Write(Bit8u * data,Bit16u * size) {
 			tempdata=(ansi.data[0]? ansi.data[0] : 1);
 			if(tempdata > col) {col = 0;}
 			else { col -= tempdata;}
-			INT10_SetCursorPos(row,col,page);
+			INT10_SetCursorPos_viaRealInt(row,col,page);
 			ClearAnsi();
 			break;
 		case 'J': /*erase screen and move cursor home*/
@@ -321,9 +321,9 @@ bool device_CON::Write(Bit8u * data,Bit16u * size) {
 			if(ansi.data[0]!=2) {/* every version behaves like type 2 */
 				LOG(LOG_IOCTL,LOG_NORMAL)("ANSI: esc[%dJ called : not supported handling as 2",ansi.data[0]);
 			}
-			INT10_ScrollWindow(0,0,255,255,0,ansi.attr,page);
+			INT10_ScrollWindow_viaRealInt(0,0,255,255,0,ansi.attr,page);
 			ClearAnsi();
-			INT10_SetCursorPos(0,0,page);
+			INT10_SetCursorPos_viaRealInt(0,0,page);
 			break;
 		case 'h': /* SET   MODE (if code =7 enable linewrap) */
 		case 'I': /* RESET MODE */
@@ -331,7 +331,7 @@ bool device_CON::Write(Bit8u * data,Bit16u * size) {
 			ClearAnsi();
 			break;
 		case 'u': /* Restore Cursor Pos */
-			INT10_SetCursorPos(ansi.saverow,ansi.savecol,page);
+			INT10_SetCursorPos_viaRealInt(ansi.saverow,ansi.savecol,page);
 			ClearAnsi();
 			break;
 		case 's': /* SAVE CURSOR POS */
@@ -342,15 +342,15 @@ bool device_CON::Write(Bit8u * data,Bit16u * size) {
 		case 'K': /* erase till end of line (don't touch cursor) */
 			col = CURSOR_POS_COL(page);
 			row = CURSOR_POS_ROW(page);
-			INT10_WriteChar(' ',ansi.attr,page,ansi.ncols-col,true); //Use this one to prevent scrolling when end of screen is reached
-			//for(i = col;i<(Bitu) ansi.ncols; i++) INT10_TeletypeOutputAttr(' ',ansi.attr,true);
-			INT10_SetCursorPos(row,col,page);
+			INT10_WriteChar_viaRealInt(' ',ansi.attr,page,ansi.ncols-col,true);  //Use this one to prevent scrolling when end of screen is reached
+			//for(i = col;i<(Bitu) ansi.ncols; i++) INT10_TeletypeOutputAttr_viaRealInt(' ',ansi.attr,true);
+			INT10_SetCursorPos_viaRealInt(row,col,page);
 			ClearAnsi();
 			break;
 		case 'M': /* delete line (NANSI) */
 			col = CURSOR_POS_COL(page);
 			row = CURSOR_POS_ROW(page);
-			INT10_ScrollWindow(row,0,ansi.nrows-1,ansi.ncols-1,ansi.data[0]? -ansi.data[0] : -1,ansi.attr,0xFF);
+			INT10_ScrollWindow_viaRealInt(row,0,ansi.nrows-1,ansi.ncols-1,ansi.data[0]? -ansi.data[0] : -1,ansi.attr,0xFF);
 			ClearAnsi();
 			break;
 		case 'l':/* (if code =7) disable linewrap */
